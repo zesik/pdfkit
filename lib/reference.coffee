@@ -51,15 +51,22 @@ class PDFReference extends stream.Writable
     
   finalize: =>
     @offset = @document._offset
-    
+
+    encryptFn = @document._security?.getEncryptFn(@id, @gen)
+
     @document._write "#{@id} #{@gen} obj"
-    @document._write PDFObject.convert(@data)
+    @document._write PDFObject.convert(@data, encryptFn)
     
     if @chunks.length
       @document._write 'stream'
-      for chunk in @chunks
-        @document._write chunk
-        
+
+      if encryptFn?
+        chunkHex = (chunk.toString('hex') for chunk in @chunks).join('')
+        @document._write new Buffer(encryptFn(chunkHex), 'hex')
+      else
+        for chunk in @chunks
+          @document._write chunk
+
       @chunks.length = 0 # free up memory
       @document._write '\nendstream'
       

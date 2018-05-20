@@ -1,5 +1,5 @@
 ###
-PDFObject - converts JavaScript types into their corrisponding PDF types.
+PDFObject - converts JavaScript types into their corresponding PDF types.
 By Devon Govett
 ###
 
@@ -31,7 +31,7 @@ class PDFObject
 
     return buff
 
-  @convert: (object) ->
+  @convert: (object, encryptFn = null) ->
     # String literals are converted to the PDF name type
     if typeof object is 'string'
       '/' + object
@@ -48,7 +48,15 @@ class PDFObject
 
       # If so, encode it as big endian UTF-16
       if isUnicode
-        string = swapBytes(new Buffer('\ufeff' + string, 'utf16le')).toString('binary')
+        stringBuffer = swapBytes(new Buffer('\ufeff' + string, 'utf16le'))
+      else
+        stringBuffer = new Buffer(string, 'ascii')
+
+      # Encrypt the string when necessary
+      if encryptFn?
+        string = new Buffer(encryptFn(stringBuffer.toString('hex')), 'hex').toString('binary')
+      else
+        string = stringBuffer.toString('binary')
 
       # Escape characters as required by the spec
       string = string.replace escapableRe, (c) ->
@@ -64,22 +72,31 @@ class PDFObject
       object.toString()
 
     else if object instanceof Date
-      '(D:' + pad(object.getUTCFullYear(), 4) +
-              pad(object.getUTCMonth() + 1, 2) +
-              pad(object.getUTCDate(), 2) +
-              pad(object.getUTCHours(), 2) +
-              pad(object.getUTCMinutes(), 2) +
-              pad(object.getUTCSeconds(), 2) +
-      'Z)'
+      string = 'D:' + pad(object.getUTCFullYear(), 4) +
+                      pad(object.getUTCMonth() + 1, 2) +
+                      pad(object.getUTCDate(), 2) +
+                      pad(object.getUTCHours(), 2) +
+                      pad(object.getUTCMinutes(), 2) +
+                      pad(object.getUTCSeconds(), 2) + 'Z'
+
+      # Encrypt the string when necessary
+      if encryptFn?
+        string = new Buffer(encryptFn(new Buffer(string, 'ascii').toString('hex')), 'hex').toString('binary')
+
+        # Escape characters as required by the spec
+        string = string.replace escapableRe, (c) ->
+          return escapable[c]
+
+      '(' + string + ')'
 
     else if Array.isArray object
-      items = (PDFObject.convert e for e in object).join(' ')
+      items = (PDFObject.convert(e, encryptFn) for e in object).join(' ')
       '[' + items + ']'
 
     else if {}.toString.call(object) is '[object Object]'
       out = ['<<']
       for key, val of object
-        out.push '/' + key + ' ' + PDFObject.convert(val)
+        out.push '/' + key + ' ' + PDFObject.convert(val, encryptFn)
 
       out.push '>>'
       out.join '\n'

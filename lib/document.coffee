@@ -8,6 +8,7 @@ fs = require 'fs'
 PDFObject = require './object'
 PDFReference = require './reference'
 PDFPage = require './page'
+PDFSecurity = require './security'
 
 class PDFDocument extends stream.Readable
   constructor: (@options = {}) ->
@@ -55,6 +56,12 @@ class PDFDocument extends stream.Readable
     if @options.info
       for key, val of @options.info
         @info[key] = val
+
+    # Generate file ID
+    @id = PDFSecurity.generateFileID(@info)
+
+    # Initialize security settings
+    @_security = PDFSecurity.create(this, @options)
 
     # Write the header
     # PDF version
@@ -179,7 +186,10 @@ class PDFDocument extends stream.Readable
       if typeof val is 'string'
         val = new String val
 
-      @_info.data[key] = val
+      entry = @ref(val)
+      entry.end()
+
+      @_info.data[key] = entry
 
     @_info.end()
 
@@ -190,6 +200,8 @@ class PDFDocument extends stream.Readable
     
     @_root.end()
     @_root.data.Pages.end()
+
+    @_security.end() if @_security?
 
     if @_waiting is 0
       @_finalize()
@@ -208,11 +220,15 @@ class PDFDocument extends stream.Readable
       @_write offset + ' 00000 n '
 
     # trailer
-    @_write 'trailer'
-    @_write PDFObject.convert
+    trailer =
       Size: @_offsets.length + 1
       Root: @_root
       Info: @_info
+      ID: [@id, @id]
+    trailer.Encrypt = @_security.dictionary if @_security?
+
+    @_write 'trailer'
+    @_write PDFObject.convert trailer
 
     @_write 'startxref'
     @_write "#{xRefOffset}"

@@ -49,11 +49,13 @@ Installation uses the [npm](http://npmjs.org/) package manager.  Just type the f
   * Underlines
   * etc.
 * Outlines
+* PDF security
+  * Encryption
+  * Access privileges (printing, copying, modifying, annotating)
   
 ## Coming soon!
 
 * Patterns fills
-* PDF Security
 * Higher level APIs for creating tables and laying out content
 * More performance optimizations
 * Even more awesomeness, perhaps written by you! Please fork this repository and send me pull requests.

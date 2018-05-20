@@ -183,7 +183,41 @@ capitalized.
   * `CreationDate` - the date the document was created (added automatically by PDFKit)
   * `ModDate` - the date the document was last modified
 
-### Adding content
+## Encryption and Access Privileges
+
+PDF spec allow you to encrypt the PDF file and require a password when opening the file,
+or set permissions of what users can do with your file. PDFKit implements standard
+security handler in PDF spec version 1.3.
+
+To enable encryption, provide a user password when creating the `PDFDocument`.
+The PDF file will be encrypted if a user password is provided, and users will be
+prompted to enter the same password to decrypt the file when they try to open it.
+
+* `userPassword` - the user password
+
+To set access privileges, you need to provide an owner password and permission
+settings in the option object when creating the `PDFDocument`:
+
+* `ownerPassword` - the owner password
+* `allowPrinting` - whether printing is allowed, `false` by default
+* `allowModifying` - whether modifying the file is allowed, `false` by default
+* `allowCopying` - whether copying text or graphics is allowed, `false` by default
+* `allowAnnotating` - whether annotating is allowed, `false` by default
+
+Users with owner password are able to gain full access to the PDF file.
+When owner password is not provided or is empty, PDF security handlers are not enabled.
+In such case, if a user password is provided for encryption, users with user password
+have full access to the file. Please note that PDF cannot enforce access privileges.
+It is up to the PDF viewer application to respect such settings.
+
+Both user password and owner password can only use characters in Unicode block
+"Basic Latin" and "Latin-1 Supplement". That is, unicode value less than 256.
+However, since it might not be possible to type control characters when users are
+prompted to enter the password for decrypting or gaining privileges, and handling of
+"Latin-1 Supplement" characters might be platform dependent, it is safer to use
+printable "Basic Latin" characters.
+
+## Adding content
 
 Once you've created a `PDFDocument` instance, you can add content to the
 document. Check out the other sections described in this document to

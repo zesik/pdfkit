@@ -3,9 +3,7 @@ PDFSecurity - represents PDF security settings
 By Yang Liu
 ###
 
-hex = require 'crypto-js/enc-hex'
-md5 = require 'crypto-js/md5'
-rc4 = require 'crypto-js/rc4'
+CryptoJS = require 'crypto-js'
 
 class PDFSecurity
   @generateFileID: (info = {}) ->
@@ -14,7 +12,7 @@ class PDFSecurity
     for own key, value of info
       infoStr += "#{key}: #{value.toString()}\n"
 
-    return new Buffer(md5(infoStr).toString(), 'hex')
+    return wordArrayToBuffer(CryptoJS.MD5(infoStr))
 
   @create: (document, options = {}) ->
     unless options.ownerPassword? || options.userPassword?
@@ -39,59 +37,66 @@ class PDFSecurity
       else
         paddedUserPassword
 
-    ownerValueKey = md5(hex.parse(paddedOwnerPassword)).toString(hex)[0..9]
-    ownerValue = rc4.encrypt(hex.parse(paddedUserPassword), hex.parse(ownerValueKey)).ciphertext.toString(hex)
+    ownerValueKey = CryptoJS.MD5(paddedOwnerPassword)
+    ownerValueKey.sigBytes = 5
+    ownerValue = CryptoJS.RC4.encrypt(paddedUserPassword, ownerValueKey).ciphertext
 
     userValueSrc =
-      paddedUserPassword +
-      ownerValue +
-      padHex(permissions & 0xff) + 'ffffff' +
-      @document.id.toString('hex')
-    @encryptionKey = md5(hex.parse(userValueSrc)).toString(hex)[0..9]
-    userValue = rc4.encrypt(hex.parse(padPassword()), hex.parse(@encryptionKey)).ciphertext.toString(hex)
+      paddedUserPassword
+        .concat(ownerValue)
+        .concat(CryptoJS.lib.WordArray.create([0x00ffffff | ((permissions & 0xff) << 24)], 4))
+        .concat(CryptoJS.lib.WordArray.create(@document.id))
+    @encryptionKey = CryptoJS.MD5(userValueSrc)
+    @encryptionKey.sigBytes = 5
+    userValue = CryptoJS.RC4.encrypt(padPassword(), @encryptionKey).ciphertext
 
     @dictionary = @document.ref
       Filter: 'Standard'
       V: 1
       R: 2
-      O: new Buffer(ownerValue, 'hex')
-      U: new Buffer(userValue, 'hex')
+      O: wordArrayToBuffer(ownerValue)
+      U: wordArrayToBuffer(userValue)
       P: permissions
 
   getEncryptFn: (obj, gen) ->
-    key = hex.parse(md5(hex.parse(
-      @encryptionKey +
-      padHex(obj & 0xff) +
-      padHex((obj >> 8) & 0xff) +
-      padHex((obj >> 16) & 0xff) +
-      padHex(gen & 0xff) +
-      padHex((gen >> 8) & 0xff)
-    )).toString()[0..19])
+    key = CryptoJS.MD5(@encryptionKey.clone().concat(CryptoJS.lib.WordArray.create(Buffer.from([
+      obj & 0xff
+      (obj >> 8) & 0xff
+      (obj >> 16) & 0xff
+      gen & 0xff
+      (gen >> 8) & 0xff
+    ]))))
+    key.sigBytes = 10
 
-    return (data) ->
-      rc4.encrypt(hex.parse(data), key).ciphertext.toString(hex)
+    return (buffer) ->
+      wordArrayToBuffer(CryptoJS.RC4.encrypt(CryptoJS.lib.WordArray.create(buffer), key).ciphertext)
 
   end: ->
     @dictionary.end()
 
   padPassword = (password = '') ->
-    out = ''
+    out = new Buffer(32)
     index = 0
     length = password.length
 
     while index < length and index < 32
-      code = password.charCodeAt(index++)
+      code = password.charCodeAt(index)
       if code > 0xff
         throw new Error 'Password contains one or more invalid character.'
-      out += padHex(code)
+      out[index] = code
+      index++
 
     while index < 32
-      out += padHex(PASSWORD_PADDING[index++ - length])
+      out[index] = PASSWORD_PADDING[index - length]
+      index++
 
-    return out
+    return CryptoJS.lib.WordArray.create(out)
 
-  padHex = (value) ->
-    return ('00' + value.toString(16)).slice(-2)
+  wordArrayToBuffer = (wordArray) ->
+    byteArray = []
+    for i in [0..wordArray.sigBytes - 1]
+      byteArray.push((wordArray.words[Math.floor(i / 4)] >> (8 * (3 - i % 4))) & 0xff)
+    return Buffer.from(byteArray)
 
   PASSWORD_PADDING = [
     0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08

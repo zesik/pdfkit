@@ -61,8 +61,7 @@ class PDFReference extends stream.Writable
       @document._write 'stream'
 
       if encryptFn?
-        chunkHex = (chunk.toString('hex') for chunk in @chunks).join('')
-        @document._write new Buffer(encryptFn(chunkHex), 'hex')
+        @document._write encryptFn(Buffer.concat(@chunks))
       else
         for chunk in @chunks
           @document._write chunk

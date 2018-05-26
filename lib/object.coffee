@@ -54,7 +54,7 @@ class PDFObject
 
       # Encrypt the string when necessary
       if encryptFn?
-        string = new Buffer(encryptFn(stringBuffer.toString('hex')), 'hex').toString('binary')
+        string = encryptFn(stringBuffer).toString('binary')
       else
         string = stringBuffer.toString('binary')
 
@@ -81,7 +81,7 @@ class PDFObject
 
       # Encrypt the string when necessary
       if encryptFn?
-        string = new Buffer(encryptFn(new Buffer(string, 'ascii').toString('hex')), 'hex').toString('binary')
+        string = encryptFn(new Buffer(string, 'ascii')).toString('binary')
 
         # Escape characters as required by the spec
         string = string.replace escapableRe, (c) ->

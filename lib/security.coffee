@@ -82,10 +82,10 @@ class PDFSecurity
 
     @encryptionKey = @getEncryptionKeyV5()
     userPasswordEntry = @getUserPasswordV5(processedUserPassword)
-    userKeySalt = CryptoJS.lib.WordArray.create([userPasswordEntry.words[10], userPasswordEntry.words[11]], 8)
+    userKeySalt = CryptoJS.lib.WordArray.create(userPasswordEntry.words.slice(10, 12), 8)
     userEncryptionKeyEntry = @getUserEncryptionKeyV5(processedUserPassword, userKeySalt, @encryptionKey)
     ownerPasswordEntry = @getOwnerPasswordV5(processedOwnerPassword, userPasswordEntry)
-    ownerKeySalt = CryptoJS.lib.WordArray.create([ownerPasswordEntry.words[10], ownerPasswordEntry.words[11]], 8)
+    ownerKeySalt = CryptoJS.lib.WordArray.create(ownerPasswordEntry.words.slice(10, 12), 8)
     ownerEncryptionKeyEntry = @getOwnerEncryptionKeyV5(processedOwnerPassword, ownerKeySalt, userPasswordEntry,
       @encryptionKey)
     permsEntry = @getEncryptedPermissions(permissions, @encryptionKey)

@@ -185,37 +185,51 @@ capitalized.
 
 ## Encryption and Access Privileges
 
-PDF spec allow you to encrypt the PDF file and require a password when opening the file,
-or set permissions of what users can do with your file. PDFKit implements standard
-security handler in PDF spec version 1.3.
+PDF specification allow you to encrypt the PDF file and require a password when opening the file,
+and/or set permissions of what users can do with the PDF file. PDFKit implements standard security
+handler in PDF version 1.7 (AES-128), and PDF version 1.7 ExtensionLevel 3 (AES-256). 
 
-To enable encryption, provide a user password when creating the `PDFDocument`.
-The PDF file will be encrypted if a user password is provided, and users will be
-prompted to enter the same password to decrypt the file when they try to open it.
+To enable encryption, provide a user password when creating the `PDFDocument` in `options` object.
+The PDF file will be encrypted when a user password is provided, and users will be prompted to enter
+the password to decrypt the file when opening it. You can also choose whether to use AES-256 encryption.
 
-* `userPassword` - the user password
+ * `userPassword` - the user password (string value)
+ * `aes256` - whether AES-256 encryption is enabled. Specify `1` to enable AES-256
 
-To set access privileges, you need to provide an owner password and permission
-settings in the option object when creating the `PDFDocument`:
+To set access privileges for the PDF file, you need to provide an owner password and permission
+settings in the `option` object when creating `PDFDocument`. By default, all operations are disallowed.
+You need to explicitly allow certain operations. 
 
-* `ownerPassword` - the owner password
-* `allowPrinting` - whether printing is allowed, `false` by default
-* `allowModifying` - whether modifying the file is allowed, `false` by default
-* `allowCopying` - whether copying text or graphics is allowed, `false` by default
-* `allowAnnotating` - whether annotating is allowed, `false` by default
+ * `ownerPassword` - the owner password (string value)
+ * `allowPrinting` - whether printing is allowed. Specify `"lowResolution"` to allow degraded printing, or `"highResolution"` to allow printing with high resolution
+ * `allowModifying` - whether modifying the file is allowed. Specify `true` to allow modifying document content
+ * `allowCopying` - whether copying text or graphics is allowed. Specify `true` to allow copying
+ * `allowAnnotating` - whether annotating, form filling is allowed. Specify `true` to allow annotating and form filling
+ * `allowFillingForms` - whether form filling and signing is allowed. Specify `true` to allow filling in form fields and signing
+ * `allowContentAccessibility` - whether copying text for accessibility is allowed. Specify `true` to allow copying for accessibility
+ * `allowDocumentAssembly` - whether assembling document is allowed. Specify `true` to allow document assembly.
 
-Users with owner password are able to gain full access to the PDF file.
-When owner password is not provided or is empty, PDF security handlers are not enabled.
-In such case, if a user password is provided for encryption, users with user password
-have full access to the file. Please note that PDF cannot enforce access privileges.
-It is up to the PDF viewer application to respect such settings.
+You can specify either user password, owner password or both passwords.
+Behavior differs according to passwords you provides:
 
-Both user password and owner password can only use characters in Unicode block
-"Basic Latin" and "Latin-1 Supplement". That is, unicode value less than 256.
-However, since it might not be possible to type control characters when users are
-prompted to enter the password for decrypting or gaining privileges, and handling of
-"Latin-1 Supplement" characters might be platform dependent, it is safer to use
-printable "Basic Latin" characters.
+ * When only user password is provided,
+   users with user password are able to decrypt the file and have full access to the document.
+ * When only owner password is provided,
+   users are able to decrypt and open the document without providing any password,
+   but the access is limited to those operations explicitly permitted.
+   Users with owner password have full access to the document.
+ * When both passwords are provided,
+   users with user password are able to decrypt the file
+   but only have limited access to the file according to permission settings.
+   Users with owner password have full access to the document.
+
+Please note that PDF file itself cannot enforce access privileges.
+When file is decrypted, PDF viewer applications have full access to the file content,
+and it is up to them to respect permission settings.
+
+When AES-256 encryption is not enabled, files are created with PDF 1.7 specification,
+and password is limited to at most 32 characters. When AES-256 is enabled,
+PDF 1.7 ExtensionLevel3 specification is used, and password can be up to 127 UTF-8 characters.
 
 ## Adding content
 

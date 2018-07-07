@@ -117,20 +117,20 @@ class PDFSecurity
   getUserPasswordV4: (encryptionKey) ->
     cipher = CryptoJS.MD5(processPassword(4).concat(CryptoJS.lib.WordArray.create(@document.id)))
     key = encryptionKey.clone()
-    for i in [0..19]
-      for j in [0..4]
+    for i in [0...20]
+      for j in [0...4]
         key.words[j] = encryptionKey.words[j] ^ (i | (i << 8) | (i << 16) | (i << 24))
       cipher = CryptoJS.RC4.encrypt(cipher, key).ciphertext
     return cipher.concat(CryptoJS.lib.WordArray.create(null, 16))
 
   getOwnerPasswordV4: (paddedUserPassword, paddedOwnerPassword) ->
-    digest = CryptoJS.MD5(paddedOwnerPassword)
-    for i in [0..49]
+    digest = paddedOwnerPassword
+    for i in [0...51]
       digest = CryptoJS.MD5(digest)
     key = digest.clone()
     cipher = paddedUserPassword
-    for i in [0..19]
-      for j in [0..4]
+    for i in [0...20]
+      for j in [0...4]
         key.words[j] = digest.words[j] ^ (i | (i << 8) | (i << 16) | (i << 24))
       cipher = CryptoJS.RC4.encrypt(cipher, key).ciphertext
     return cipher
@@ -140,7 +140,7 @@ class PDFSecurity
       .concat(ownerPasswordEntry)
       .concat(CryptoJS.lib.WordArray.create([lsbFirstWord(permissions)], 4))
       .concat(CryptoJS.lib.WordArray.create(@document.id))
-    for i in [0..50]
+    for i in [0...51]
       key = CryptoJS.MD5(key)
     return key
 
@@ -210,7 +210,7 @@ class PDFSecurity
       length = Math.min(127, password.length)
       out = new Buffer(length)
 
-      for index in [0..length - 1]
+      for index in [0...length]
         out[index] = password.charCodeAt(index)
 
     else
@@ -236,7 +236,7 @@ class PDFSecurity
 
   wordArrayToBuffer = (wordArray) ->
     byteArray = []
-    for i in [0..wordArray.sigBytes - 1]
+    for i in [0...wordArray.sigBytes]
       byteArray.push((wordArray.words[Math.floor(i / 4)] >> (8 * (3 - i % 4))) & 0xff)
     return Buffer.from(byteArray)
 

@@ -15,7 +15,7 @@ class PDFDocument extends stream.Readable
     super
 
     # PDF version
-    @version = 1.3
+    @version = if @options.userPassword or @options.ownerPassword then 1.7 else 1.3
 
     # Whether streams should be compressed
     @compress = @options.compress ? yes

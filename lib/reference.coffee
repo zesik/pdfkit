@@ -54,17 +54,19 @@ class PDFReference extends stream.Writable
 
     encryptFn = @document._security?.getEncryptFn(@id, @gen)
 
+    if @chunks.length and encryptFn?
+      encryptedChunk = encryptFn(Buffer.concat(@chunks))
+      @chunks.length = 0
+      @chunks.push encryptedChunk
+      @data.Length = encryptedChunk.length
+
     @document._write "#{@id} #{@gen} obj"
     @document._write PDFObject.convert(@data, encryptFn)
     
     if @chunks.length
       @document._write 'stream'
-
-      if encryptFn?
-        @document._write encryptFn(Buffer.concat(@chunks))
-      else
-        for chunk in @chunks
-          @document._write chunk
+      for chunk in @chunks
+        @document._write chunk
 
       @chunks.length = 0 # free up memory
       @document._write '\nendstream'
